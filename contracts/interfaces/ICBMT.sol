@@ -140,6 +140,12 @@ interface ICBMT is IERC1155 {
     event GrossSettlement( address generalAddress, address redemptionAddress, uint256 fromBankId, uint256 toBankId, uint256 currencyId, uint256 amountSettled);
 
     /** 
+    * @dev Return an integer indicating the contract version
+    *
+    */ 
+    function getContractVersion() external pure returns (uint256);
+
+    /** 
     * @dev Return a string indicating the URI setted by a Bank at the moment of the token's deploy 
     *
     */ 

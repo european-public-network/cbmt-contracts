@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.9.0;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./GeneralCBMT.sol";
 import "./interfaces/ICBMT.sol";
 
-contract CBMT is ICBMT, ERC1155, Ownable(msg.sender) {
+contract CBMT is Initializable, ICBMT, ERC1155Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
 
     string public _name;
     string public _symbol;
     
     uint256 public constant BLANK_TOKEN_ID = 0;
     // CHG001
-    // uint256 public constant EXCHANGE_RATE_BASE = 1000000;
     uint256 public constant EXCHANGE_RATE_BASE = 100000000;
     
     mapping(uint256 => mapping(uint256 => bool)) _netSettlementAvailable;
@@ -26,7 +26,9 @@ contract CBMT is ICBMT, ERC1155, Ownable(msg.sender) {
 
     GeneralCBMT public _GeneralCBMT;
 
-    constructor( string memory name_, string memory symbol_, GeneralCBMT __GeneralCBMT, string memory uri_  ) ERC1155(uri_) {
+    function initialize( string memory name_, string memory symbol_, GeneralCBMT __GeneralCBMT, string memory uri_  ) public initializer {
+        __ERC1155_init(uri_);
+        __Ownable_init(msg.sender);
         _name = name_;
         _symbol = symbol_;
         _GeneralCBMT = __GeneralCBMT;
@@ -59,7 +61,11 @@ contract CBMT is ICBMT, ERC1155, Ownable(msg.sender) {
         _;
     }
 
-    function uri(uint256 tokenId) public view virtual override( ERC1155 ) returns (string memory) {
+    function getContractVersion() public pure returns (uint256) {
+        return 20250313000101; /* CBMTContractVersion */
+    }
+
+    function uri(uint256 tokenId) public view virtual override( ERC1155Upgradeable ) returns (string memory) {
         return string(abi.encodePacked("https://cbmt.world/schema/", Strings.toHexString(tokenId), "/info.json"));
     }
 
@@ -144,11 +150,11 @@ contract CBMT is ICBMT, ERC1155, Ownable(msg.sender) {
         emit TransferTokenFromBank( msg.sender, to, bankId ,tokenId, amountToTransfer );
     }
 
-    function safeBatchTransferFrom (address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public pure override (ERC1155, IERC1155) {
+    function safeBatchTransferFrom (address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public pure override (ERC1155Upgradeable, IERC1155) {
         revert ( "Disabled" );
     }
 
-    function safeTransferFrom( address from, address to, uint256 tokenId, uint256 amountToTransfer, bytes memory data ) public override(ERC1155, IERC1155) {
+    function safeTransferFrom( address from, address to, uint256 tokenId, uint256 amountToTransfer, bytes memory data ) public override(ERC1155Upgradeable, IERC1155) {
         // require( from == msg.sender || isApprovedForAll( from, msg.sender ), "");
         // CHG003 So that the address of other smart contracts is not checked here. CBMT should not check other smart contract addresses, as these run on the customer's dlt.
         require( from == msg.sender, "");
@@ -450,7 +456,13 @@ contract CBMT is ICBMT, ERC1155, Ownable(msg.sender) {
         return _bankPairExchangeRate[ bankId ][ fromCurrencyId_1 ][ toCurrencyId_2 ];
     }
 
-    function deconstruct() public onlyOwner{
-        selfdestruct(payable(owner()));
+    //function deconstruct() public onlyOwner{
+    //    selfdestruct(payable(owner()));
+    //}
+
+    function _authorizeUpgrade(address newImplementation) override internal onlyOwner {
+    /* only the owner can upgrade; maybe we want later to rotate credentials, so we should
+     * enable transferring ownership I guess
+     */
     }
 }

@@ -1,0 +1,37 @@
+{
+  "name": "testprojectcbmt",
+  "version": "1.0.0",
+  "description": "Testing solutions for CBMT Project",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run --network <network_name> <path>",
+    "test": "npx hardhat test",
+    "verify": "npx hardhat verify --network <network_name> <contract_address> <args>"
+  },
+  "author": "Antonio Martone",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.6",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.12",
+    "@openzeppelin/contracts": "^5.2.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.0",
+    "@openzeppelin/test-helpers": "^0.5.15",
+    "@typechain/hardhat": "^9.1.0",
+    "chai": "^4.2.0",
+    "dotenv": "^16.4.0",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^6.13.5",
+    "fs-extra": "^11.1.1",
+    "hardhat": "^2.22.0",
+    "hardhat-deploy": "^0.12.0",
+    "hardhat-deploy-ethers": "^0.4.2",
+    "solidity-coverage": "0.8.2",
+    "ts-node": "^10.9.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^5.2.0",
+    "color-convert-route": "^0.0.1"
+  }
+}

@@ -110,6 +110,8 @@ interface IGeneralCBMT {
 
     /// @dev FUNCTIONS DECLARATION
 
+    function getContractVersion() external pure returns (uint256);
+
     /** 
     * @dev Function called by TSP to add a currency to the contract
     *

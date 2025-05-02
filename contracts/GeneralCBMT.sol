@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT  
 pragma solidity >=0.6.0 <0.9.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IGeneralCBMT.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract GeneralCBMT is IGeneralCBMT, Ownable(msg.sender) {
+contract GeneralCBMT is Initializable, IGeneralCBMT, OwnableUpgradeable, UUPSUpgradeable {
 
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint256 public constant BANK_ID_ADDER = 1000;
-    uint256 public bank_Id = 1000;
-
+    uint256 public bank_Id;
     
     mapping( uint256 => Bank ) internal _bank;
     mapping( address => Customer ) internal _customer;
@@ -30,11 +30,21 @@ contract GeneralCBMT is IGeneralCBMT, Ownable(msg.sender) {
     mapping( uint256 => mapping ( address => EnumerableSet.UintSet) ) internal _supportedCurrencies;
     mapping( address => mapping ( uint256 => uint256 ) ) internal _preferredIssuerForCurrency;
 
-
     EnumerableSet.AddressSet internal participatingBanks;
     EnumerableSet.UintSet private currencies;
     EnumerableSet.UintSet private _validTokenIds;
+    
+    function initialize(uint256[] memory initialCurrencies) public initializer {
+        __Ownable_init(msg.sender);
+        bank_Id = 1000;
+        for (uint256 i = 0; i < initialCurrencies.length; i++) {
+            currencies.add(initialCurrencies[i]);
+        }
+    }
 
+    function getContractVersion() public pure returns (uint256) {
+        return 20250313000101; /* CBMTContractVersion */
+    }
 
     modifier onlyParticipatingBank(uint256 bankId) {
         require(getIssuingAddress(bankId) == msg.sender || getMintAddress(bankId) == msg.sender 
@@ -53,12 +63,6 @@ contract GeneralCBMT is IGeneralCBMT, Ownable(msg.sender) {
         _;
     }
     
-    constructor(uint256[] memory initialCurrencies) {
-        for (uint256 i = 0; i < initialCurrencies.length; i++) {
-            currencies.add(initialCurrencies[i]);
-        }
-    }
-
     function addCurrency(uint256 currencyId) public override onlyOwner{
         require( !currencies.contains(currencyId), "Currency already exists");
         // CHG002  require( currencyId > 0 && currencyId < 100, "Currency ID must be between 0 and 99");
@@ -694,6 +698,13 @@ contract GeneralCBMT is IGeneralCBMT, Ownable(msg.sender) {
     }
     
     function deconstruct() public onlyOwner{
-        selfdestruct(payable(owner()));
+    /* we shouldn't call this anyway */
+        //selfdestruct(payable(owner()));
+    }
+    
+    function _authorizeUpgrade(address newImplementation) override internal onlyOwner {
+    /* only the owner can upgrade; maybe we want later to rotate credentials, so we should
+     * enable transferring ownership I guess
+     */
     }
 }
