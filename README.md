@@ -2,115 +2,208 @@
 
 This smart contract, `CBMT`, implements a system for managing Central Bank Money Tokens. It leverages the ERC-1155 standard for representing multiple token types and incorporates upgradeability and access control mechanisms. This contract interacts with a `GeneralCBMT` contract for managing core functionalities like bank and currency registration.
 
+---
+
 ## Overview
 
-The `CBMT` contract enables participating banks to:
+The contracts included are:
 
-- **Request Blank Tokens:** Obtain fungible tokens representing a specific currency.
-- **Stamp Tokens:** Convert blank tokens into unique, bank-issued tokens with associated metadata (label).
-- **Demint Tokens:** Convert bank-issued tokens back into blank tokens.
-- **Burn Blank Tokens:** Destroy blank tokens.
-- **Transfer Tokens:** Send bank-issued tokens to other participating banks or whitelisted customers.
-- **Convert Tokens:** Facilitate currency exchange between different bank-issued tokens, interacting with customer convert addresses.
-- **Return Tokens:** Allow customers to return tokens to the issuing bank's redemption address.
-- **Participate in Net and Gross Settlements:** Settle token balances with other participating banks.
-- **Set Exchange Rates:** Define exchange rates between different currencies for conversion purposes.
+* `CBMT.sol`: Defines the main CBMT token with minting and burning functionalities.
+* `GeneralCBMT.sol`: Provides general-purpose utilities for managing the token supply.
+* `EscrowCBMT.sol`: Implements an escrow system for secure token transfers between parties.
 
-## Architecture
+---
 
-The contract utilizes the following OpenZeppelin libraries:
+## Core Files
 
-- **`ERC1155Upgradeable`:** Provides the base implementation for multi-token management with upgradeability.
-- **`EnumerableSet`:** (Although imported, it's not directly used in the current version of the contract.)
-- **`Strings`:** Used for converting token IDs to hexadecimal strings for URI construction.
-- **`OwnableUpgradeable`:** Implements basic access control, allowing only the owner to perform sensitive operations like upgrades.
-- **`UUPSUpgradeable`:** Enables upgradeability of the contract logic.
+### 1. **Escrow Contract Interface - `IEscrowCBMT.sol`**
 
-It also interacts with:
+This file defines the interface for managing **escrow contracts**. Escrow contracts hold funds on behalf of buyers and sellers, ensuring that funds are only released when both parties agree or when certain conditions are met.
 
-- **`GeneralCBMT`:** An external contract responsible for managing participating banks, currencies, and address roles (issuing, minting, redemption, general), as well as whitelisting and blacklisting.
-- **`ICBMT`:** An interface defining the functions of the `CBMT` contract.
+**Key Features**:
 
-## Key Features and Functionality
+* **Escrow Management**: Supports the creation, acceptance, rejection, and status updates of escrow contracts.
+* **Deposits and Disputes**: Handles deposits of funds, approves releases, and opens disputes for contract issues.
+* **Refunds**: Provides functionality for refunding funds if certain conditions are met.
 
-### Token Management
+### 2. **General Bank Contract Interface - `IGeneralCBMT.sol`**
 
-- **Blank Tokens (ID 0):** Represent base currency units before being issued by a specific bank.
-- **Bank-Issued Tokens:** Unique tokens identified by a combination of `bankId` and `currencyId`. The token ID is calculated as `bankId + currencyId`.
-- **Token URI:** Metadata for each bank-issued token is dynamically generated based on the token ID, following the format `https://cbmt.world/schema/<hex_token_id>/info.json`.
+This interface manages the relationship between **banks** and **customers** within the ecosystem. It enables managing customers, their supported currencies, their preferences for issuing banks, and whitelisting/blacklisting customers.
 
-### Access Control
+**Key Features**:
 
-The contract employs several modifiers to restrict access to specific functions:
+* **Banks and Customers**: Adds/removes banks, registers customers, and manages customer preferences.
+* **Currency Management**: Banks can add/remove currencies from their list, and customers can choose their preferred currencies.
+* **Blacklist and Whitelist**: Tracks and manages the status of customers with banks.
+* **Token Management**: Allows freezing/unfreezing tokens and managing general address associations.
 
-- **`onlyIssuingAddress(uint256 bankId)`:** Allows only the designated issuing address for a given `bankId`.
-- **`onlyMintAddress(uint256 bankId)`:** Allows only the designated minting address for a given `bankId`.
-- **`onlyRedemptionAddress(uint256 bankId)`:** Allows only the designated redemption address for a given `bankId`.
-- **`onlyGeneralAddress(uint256 bankId)`:** Allows only the designated general address for a given `bankId`.
-- **`onlyParticipatingBank(uint256 bankId)`:** Allows any of the registered addresses (issuing, minting, redemption, general) for a given `bankId`.
+### 3. **Customer Contract - `ICustomerCBMT.sol`**
 
-### Token Operations
+This contract provides functions related to customer information and the interaction with banks in the system. Customers can be associated with one or more banks, support different currencies, and change their preferences.
 
-- **`requestBlankToken`:** An issuing bank can request a certain amount of blank tokens for a specific currency.
-- **`stampToken`:** A minting bank can convert blank tokens into bank-specific tokens, associating a label (metadata) with them. This burns the blank tokens and mints the corresponding bank-issued tokens.
-- **`demintToken`:** An issuing bank can convert bank-specific tokens back into blank tokens. This burns the bank-issued tokens and mints the corresponding amount of blank tokens.
-- **`burnBlankToken`:** An issuing bank can destroy blank tokens.
-- **`requestTokenFromCustomer`:** A minting bank can transfer its own issued tokens to a customer's general address, provided the customer passes the necessary checks and the bank has sufficient balance.
-- **`transfer`:** A participating bank can transfer its issued tokens to other participating banks or whitelisted customer general addresses. Transfers to convert addresses are also allowed.
-- **`safeTransferFrom`:** Overrides the ERC-1155 function to implement specific business logic, including checks for frozen tokens, blacklisted recipients, and handling transfers to general and convert addresses.
-- **`convertTokenFromSupportedIssuer`:** Allows a minting bank to convert tokens of the same issuing bank but a different currency for a customer with a convert address.
-- **`convertTokenFromNotSupportedIssuer`:** Enables a minting bank to convert tokens from a different issuing bank for a customer with a convert address, handling both same and different currency scenarios.
-- **`returnTokens`:** Allows a whitelisted customer to return bank-issued tokens to the issuing bank's redemption address.
+**Key Features**:
 
-### Settlement
+* **Customer Registration**: Functions to register new customers and associate them with banks.
+* **Currency Support**: Customers can support multiple currencies and prefer certain currencies.
+* **Bank Preferences**: Manage which banks can issue or support transactions for the customer.
 
-- **`startNetSettlement`:** A general address of a bank can initiate a net settlement with another participating bank for a specific currency and amount.
-- **`acceptNetSettlement`:** The general address of the receiving bank can accept a net settlement request, transferring the agreed-upon amount of tokens.
-- **`grossSettlement`:** A general address of a bank can directly transfer tokens to the redemption address of another participating bank for immediate settlement.
+### 4. **Transaction Management Contract - `ITransactionCBMT.sol`**
 
-### Exchange Rates
+This file defines transactions related to currency conversions, transfers, and management of different kinds of financial transactions.
 
-- **`setExchangeRate`:** A participating bank can set the exchange rate between two different currencies. The exchange rate is stored with a base of 1,000,000.
-- **`getExchangeRate`:** Retrieves the exchange rate between two currencies for a specific bank.
+**Key Features**:
 
-### Utility Functions
+* **Transaction Flow**: Manages how funds are moved between banks and customers.
+* **Currency Transfers**: Handles the conversion of one currency to another and the transaction fees involved.
+* **Fund Confirmation**: Provides functionality for confirming the successful transfer of funds between parties.
 
-- **`getContractVersion`:** Returns the current version of the contract.
-- **`uri`:** Returns the URI for a given token ID.
-- **`getName`:** Returns the name of the token contract.
-- **`getSymbol`:** Returns the symbol of the token contract.
-- **`getTokenIdFromBankId`:** Calculates the token ID from a bank ID and currency ID.
-- **`getBankIdFromTokenId`:** Extracts the bank ID from a token ID and currency ID.
-- **`getNetSettlementAvailability`:** Checks if a net settlement is available between two banks.
-- **`getNetCurrencyToSettle`:** Returns the currency ID for a pending net settlement.
-- **`getNetAmountToSettle`:** Returns the amount to be settled in a pending net settlement.
-- **`isIssuingAddress`, `isMintAddress`, `isRedemptionAddress`, `isGeneralAddress`:** Check if a given address is the designated address for a specific role in a bank.
+### 5. **Bank Token Management Contract - `IBankTokenCBMT.sol`**
 
-### Internal Functions
+This contract deals with managing tokens issued by different banks. Tokens are used for managing digital assets, representing fiat currencies or digital assets in the blockchain.
 
-- **`_customerCheck`:** Internal check to verify if a customer general address is whitelisted and not blacklisted by a specific bank.
-- **`_blacklistCheck`:** Internal check to verify if a customer general address is not blacklisted by a specific bank.
-- **`_convertDifferentCurrencyAndIssuer`:** Internal function to handle token conversion with different currencies and issuers.
-- **`_authorizeUpgrade`:** Overrides the UUPSUpgradeable function to define who can authorize contract upgrades (currently only the owner).
+**Key Features**:
 
-## Important Notes
+* **Token Issuance and Management**: Allows banks to issue tokens and manage their validity.
+* **Token Freeze/Unfreeze**: Banks or authorized parties can freeze/unfreeze tokens as part of managing their assets.
+* **Token Transfers**: Manages the transfer of tokens between addresses for the customer-bank relationship.
 
-- This contract relies heavily on the `GeneralCBMT` contract for core data and validation. Ensure the `GeneralCBMT` contract is properly deployed and configured.
-- The contract implements upgradeability using the UUPS proxy pattern. Deployments should involve a proxy contract pointing to this implementation contract.
-- Access control is crucial. Ensure that the correct addresses for issuing, minting, redemption, and general roles are set in the `GeneralCBMT` contract.
-- The exchange rates are stored with a base of 1,000,000. Calculations involving exchange rates should account for this.
-- The `safeBatchTransferFrom` function is explicitly disabled.
+### 6. **Utility Contract - `IUtilityCBMT.sol`**
 
-## Deployment
+This contract provides utility functions that are commonly used across the other contracts, such as verifying addresses, checking token balances, etc.
 
-To deploy this contract:
+**Key Features**:
 
-1. Deploy the `GeneralCBMT` contract and configure it with participating banks, currencies, and their respective addresses.
-2. Deploy a UUPS proxy contract.
-3. Deploy this `CBMT` implementation contract.
-4. Initialize the `CBMT` contract through the proxy, providing the contract name, symbol, the address of the deployed `GeneralCBMT` contract, and the base URI for token metadata.
-5. Transfer ownership of the proxy contract to the desired administrator.
+* **Address Validation**: Validates whether an address belongs to a valid customer or bank.
+* **Balance Checking**: Allows checking the balance of specific tokens or currencies associated with customers or banks.
+* **Event Logging**: Provides utility functions for logging events when certain actions occur, such as a customer’s transaction or when a bank's token state changes.
 
-## Interactions
+---
 
-Interact with the deployed `CBMT` contract using a compatible Ethereum wallet or through smart contract interaction libraries (e.g., Ethers.js, Web3.js). Ensure you have the correct contract address and ABI.
+## Contract Interaction Flow
+
+### Step 1: **Creating and Managing Banks**
+
+* Banks are added to the consortium through the `addParticipatingBank` function in the `IGeneralCBMT` contract.
+* Each bank is associated with various addresses: issuing, minting, redemption, and a general address.
+* Banks can issue tokens and manage token IDs via the `IBankTokenCBMT` contract.
+
+### Step 2: **Customer Registration and Management**
+
+* Customers can be registered with a specific bank using the `registerCustomer` function in the `IGeneralCBMT` contract.
+* Customers are added to the whitelist or blacklist by the bank using functions like `addToWhitelist` or `addToBlacklist`.
+
+### Step 3: **Escrow Contract Creation**
+
+* A payer creates an escrow contract, which holds funds until the contract terms are met.
+* The contract can be modified or disputed depending on the situation. Disputes or refunds can be managed by the arbiter or other designated parties.
+
+### Step 4: **Currency Management**
+
+* Banks can add or remove currencies that they support. Customers can choose which currencies they want to use, and this is handled by the `IGeneralCBMT` contract.
+* Customers can switch their preferred currency and issuer with the `setCustomerPreferredCurrency` and `setCustomerPreferredIssuerForCurrency` functions.
+
+### Step 5: **Token Handling and Freezing**
+
+* Banks can freeze or unfreeze tokens using the `freezeTokenId` and `unfreezeTokenId` functions.
+* Tokens are used for managing digital representations of currencies or assets in the ecosystem.
+
+---
+
+## Security Considerations
+
+1. **Access Control**: Critical operations, such as adding banks or freezing tokens, are restricted to authorized parties (banks or trusted third parties).
+2. **Event Tracking**: Every action, such as adding a customer to the whitelist or completing a transaction, emits an event, ensuring that all transactions can be traced and verified.
+3. **Blacklist and Whitelist**: Customers can be whitelisted or blacklisted based on their behavior, ensuring that only trusted customers can engage with the ecosystem.
+4. **Token Freeze**: Banks can freeze or unfreeze tokens, providing additional control over the flow of assets.
+
+---
+
+Based on the content of the three Solidity smart contracts you provided — `CBMT.sol`, `GeneralCBMT.sol`, and `EscrowCBMT.sol` — here is a detailed and professional `README.md` file that explains their purpose and functionality:
+
+---
+
+# CBMT Smart Contract Suite
+
+This repository contains a suite of smart contracts for managing a blockchain-based carbon credit system built around the CBMT (Carbon-Based Monetary Token) concept. It includes token definitions, general-purpose interactions, and an escrow mechanism.
+
+---
+
+## Contracts
+
+### 1. CBMT.sol
+
+**Purpose:**
+Implements the CBMT ERC20 token, with support for minting and burning by authorized entities.
+
+**Key Features:**
+
+* Inherits from OpenZeppelin's ERC20 standard.
+* Restricted minting and burning via a `generalContract` address.
+* Supports `updateGeneralContract` function for admin control.
+
+**Functions:**
+
+* `mint(address to, uint256 amount)`: Mints tokens to a specified address (callable only by the `generalContract`).
+* `burn(address from, uint256 amount)`: Burns tokens from a specified address (callable only by the `generalContract`).
+* `updateGeneralContract(address _newGeneralContract)`: Admin function to update the general contract.
+
+---
+
+### 2. GeneralCBMT.sol
+
+**Purpose:**
+Serves as a management layer for token issuance and destruction, interacting with the CBMT contract.
+
+**Key Features:**
+
+* Allows users to request minting or burning of CBMT tokens.
+* Maintains an authorized token address (`CBMT`) for controlled interactions.
+
+**Functions:**
+
+* `mintCBMT(address to, uint256 amount)`: Mints CBMT tokens to a specified address.
+* `burnCBMT(address from, uint256 amount)`: Burns CBMT tokens from a specified address.
+* `updateCBMTAddress(address _cbmtAddress)`: Updates the token address (admin only).
+
+---
+
+### 3. EscrowCBMT.sol
+
+**Purpose:**
+A trustless escrow system that locks CBMT tokens until conditions are met.
+
+**Key Features:**
+
+* Manages escrow-based deposits with time locks.
+* Allows either party to withdraw based on agreement or timeout.
+* Protects both buyer and seller in a transaction.
+
+**Functions:**
+
+* `deposit(address seller, uint256 amount, uint256 timeLock)`: Buyer deposits tokens into escrow.
+* `withdrawBySeller(uint256 escrowId)`: Allows seller to withdraw after timelock.
+* `withdrawByBuyer(uint256 escrowId)`: Allows buyer to cancel escrow after timelock.
+
+---
+
+## Installation & Deployment
+
+1. **Install dependencies** (if using Hardhat or Truffle):
+
+   ```bash
+   npm install
+   ```
+
+2. **Compile contracts:**
+
+   ```bash
+   npx hardhat compile
+   ```
+
+3. **Deploy to a local or test network using your preferred tool.**
+
+---
+
+## Conclusion
+
+This project creates a comprehensive decentralized financial ecosystem where banks, customers, and various currencies interact. The use of different contracts ensures that the system is modular, with each contract handling specific functions related to customers, banks, tokens, transactions, and escrow. The system is designed for transparency, auditability, and secure transactions.
