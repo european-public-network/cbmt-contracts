@@ -1,6 +1,6 @@
-# CBMT (Central Bank Money Token) Smart Contract
+# CBMT (Commerical Bank Money Token) Smart Contract
 
-This smart contract, `CBMT`, implements a system for managing Central Bank Money Tokens. It leverages the ERC-1155 standard for representing multiple token types and incorporates upgradeability and access control mechanisms. This contract interacts with a `GeneralCBMT` contract for managing core functionalities like bank and currency registration.
+This smart contract, `CBMT`, implements a system for managing Commerical Bank Money Tokens. It leverages the ERC-1155 standard for representing multiple token types and incorporates upgradeability and access control mechanisms. This contract interacts with a `GeneralCBMT` contract for managing core functionalities like bank and currency registration.
 
 ---
 
