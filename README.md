@@ -14,6 +14,12 @@ The contracts included are:
 
 ---
 
+## Flowchart
+
+![Flowchart](./media/diagram.png)
+
+---
+
 ## Core Files
 
 ### 1. **Escrow Contract Interface - `IEscrowCBMT.sol`**
