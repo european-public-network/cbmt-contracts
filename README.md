@@ -133,11 +133,11 @@ This repository contains a suite of smart contracts for managing a blockchain-ba
 ### 1. CBMT.sol
 
 **Purpose:**
-Implements the CBMT ERC20 token, with support for minting and burning by authorized entities.
+Implements the CBMT ERC1155 token, with support for minting and burning by authorized entities.
 
 **Key Features:**
 
-* Inherits from OpenZeppelin's ERC20 standard.
+* Inherits from OpenZeppelin's ERC1155 standard.
 * Restricted minting and burning via a `generalContract` address.
 * Supports `updateGeneralContract` function for admin control.
 
